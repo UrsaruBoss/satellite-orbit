@@ -1,15 +1,15 @@
-name: Update TLE dataset (daily)
+name: Update TLE & Deploy
 
 on:
   schedule:
-    - cron: "15 2 * * *"  # daily at 02:15 UTC
+    - cron: "15 2 * * *"  # Zilnic la 02:15 UTC
   workflow_dispatch: {}
 
 permissions:
   contents: write
 
 jobs:
-  update:
+  update-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,20 +25,42 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      # 1. ACTUALIZAREA DATELOR
       - name: Update TLE file
         run: node scripts/update_tle.js
 
-      - name: Commit & push if changed
+      # Siguranță: Verificăm dacă fișierul nu e gol (ca să nu stricăm site-ul cu date corupte)
+      - name: Verify TLE data
+        run: |
+          if [ ! -s public/data/satellites.tle ]; then
+            echo "Error: TLE file is empty or missing!"
+            exit 1
+          fi
+
+      # 2. SALVAREA ÎN MAIN (Opțional, dar recomandat pentru istoric)
+      - name: Commit & push data to main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
+          
           git add public/data/satellites.tle
-
+          
+          # Dăm commit doar dacă s-a schimbat ceva
           if git diff --cached --quiet; then
-            echo "No changes in TLE file. Skipping commit."
-            exit 0
+            echo "No changes in TLE file."
+          else
+            git commit -m "chore(data): refresh TLE dataset [skip ci]"
+            git push
           fi
 
-          git commit -m "chore(data): refresh TLE dataset"
-          git push
+      # 3. BUILD & DEPLOY PE GITHUB PAGES
+      # Asta face ca site-ul live să își ia noile date
+      - name: Build Project
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist  # Folderul creat de Vite
+          force_orphan: true   # Păstrează istoricul git curat pe branch-ul de pages

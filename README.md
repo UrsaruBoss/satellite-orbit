@@ -15,6 +15,22 @@ The project is designed as a **technical portfolio and research-grade visualizat
 
 ---
 
+## Live Demo
+
+The project is deployed on GitHub Pages:
+
+* [https://ursaruboss.github.io/satellite-orbit/](https://ursaruboss.github.io/satellite-orbit/)
+
+---
+
+## Screenshots
+
+| Globe overview                                           | Satellite selected                                               | TLE / data freshness                             |
+| -------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------ |
+| ![Globe overview](assets/screenshots/globe_overview.png) | ![Satellite selected](assets/screenshots/satellite_selected.png) | ![TLE health](assets/screenshots/tle_health.png) |
+
+---
+
 ## Key Features
 
 * Real-time satellite orbit propagation on a 3D Earth globe
@@ -117,29 +133,6 @@ Then open:
 ```
 http://localhost:5173
 ```
-
----
-
-## Screenshots
-
-```
-assets/screenshots/
-  globe_overview.png
-  satellite_selected.png
-  tle_health.png
-```
-
----
-
-## Live Demo
-
-A live demo can be deployed using the provided Docker configuration on any standard VPS or cloud instance.
-
-```
-https://your-live-demo-link
-```
-
----
 
 ## Intended Use Cases
 

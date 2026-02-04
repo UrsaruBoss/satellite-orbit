@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
 
+window.CESIUM_BASE_URL = `${import.meta.env.BASE_URL}cesium/`;
+
 /**
  * Application entry point.
  *
