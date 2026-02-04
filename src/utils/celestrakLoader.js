@@ -16,7 +16,7 @@
 
 // Path to the locally generated TLE file.
 // The browser can access files placed in /public via absolute paths.
-const DATA_URL = "/data/satellites.tle";
+const DATA_URL = `${import.meta.env.BASE_URL}data/satellites.tle`;
 
 /**
  * Fetch and parse satellite TLE data.
