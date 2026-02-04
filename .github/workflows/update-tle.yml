@@ -1,48 +1,83 @@
-name: Direct Live Update
+name: Universal TLE Update (Main & Live)
 
 on:
   schedule:
-    - cron: "15 2 * * *" # 02:15 UTC
-  workflow_dispatch: {}
+    - cron: "15 2 * * *"  # 02:15 UTC Zilnic
+  workflow_dispatch: {}  
 
 permissions:
   contents: write
 
 jobs:
-  run-on-gh-pages:
+  update-everywhere:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout GH-Pages
+      # ---------------------------------------------------------
+      # PHASE 1: MAIN
+      # ---------------------------------------------------------
+      - name: Checkout Main (Source)
         uses: actions/checkout@v4
         with:
-          ref: gh-pages
+          ref: main
+          fetch-depth: 0 
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
       - name: Install dependencies
-        run: |
-          if [ -f package.json ]; then
-            npm ci
-          else
-            npm install axios # <--- Adauga aici alte librarii daca scriptul tau le cere
-          fi
-      - name: Update TLE
+        run: npm ci
+
+      - name: Generate TLE Data
         run: node scripts/update_tle.js
 
-      - name: Commit & Push
+      - name: Save Data to Temp Vault
+        run: cp public/data/satellites.tle /tmp/satellites.tle
+
+      - name: Commit to Main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Adaugam tot ce s-a modificat (presupunand ca scriptul a suprascris .tle-ul)
-          git add .
+          git add public/data/satellites.tle
           
           if git diff --cached --quiet; then
-            echo "Nimic nou sub soare."
-            exit 0
+            echo "Main: No changes needed."
+          else
+            git commit -m "chore(data): refresh TLE source [skip ci]"
+            git push origin main
           fi
+
+      # ---------------------------------------------------------
+      # PHASE 2: GH-PAGES (LIVE SITE)
+      # ---------------------------------------------------------
+      - name: Switch to GH-Pages
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
+
+      - name: Inject Data from Temp Vault
+        run: |
+          # Pe gh-pages structura e diferita (root = public)
+          # Deci folderul e 'data/', nu 'public/data/'
+          mkdir -p data
           
-          git commit -m "chore(live): auto-update satellites [skip ci]"
-          git push origin gh-pages
+          # Aducem fisierul generat la Faza 1
+          cp /tmp/satellites.tle data/satellites.tle
+          
+          ls -l data/satellites.tle # Debug check
+
+      - name: Commit to Live Site
+        run: |
+          # Nu mai trebuie config user/email ca e setat global mai sus
+          
+          git add data/satellites.tle
+          
+          if git diff --cached --quiet; then
+            echo "Live: Already up to date."
+          else
+            git commit -m "chore(live): deploy fresh TLE data [skip ci]"
+            git push origin gh-pages
+          fi
