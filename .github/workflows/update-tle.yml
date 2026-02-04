@@ -1,4 +1,4 @@
-name: Update TLE & Deploy
+name: Fast TLE Update (No Build)
 
 on:
   schedule:
@@ -9,58 +9,64 @@ permissions:
   contents: write
 
 jobs:
-  update-and-deploy:
+  surgical-update:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Avem nevoie de istoric pentru a comuta branch-urile
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
-      - name: Install deps
+      - name: Install deps (only for script)
         run: npm ci
 
-      # 1. ACTUALIZAREA DATELOR
+      # 1. GENERĂM DATELE NOI
       - name: Update TLE file
         run: node scripts/update_tle.js
 
-      # Siguranță: Verificăm dacă fișierul nu e gol (ca să nu stricăm site-ul cu date corupte)
-      - name: Verify TLE data
-        run: |
-          if [ ! -s public/data/satellites.tle ]; then
-            echo "Error: TLE file is empty or missing!"
-            exit 1
-          fi
-
-      # 2. SALVAREA ÎN MAIN (Opțional, dar recomandat pentru istoric)
-      - name: Commit & push data to main
+      # 2. SALVĂM DATELE ÎN MAIN (Ca să nu fie sursa outdated)
+      - name: Commit to Main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           git add public/data/satellites.tle
           
-          # Dăm commit doar dacă s-a schimbat ceva
           if git diff --cached --quiet; then
-            echo "No changes in TLE file."
+            echo "No changes in TLE."
           else
-            git commit -m "chore(data): refresh TLE dataset [skip ci]"
-            git push
+            git commit -m "chore(data): refresh TLE [skip ci]"
+            git push origin main
           fi
 
-      # 3. BUILD & DEPLOY PE GITHUB PAGES
-      # Asta face ca site-ul live să își ia noile date
-      - name: Build Project
-        run: npm run build
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist  # Folderul creat de Vite
-          force_orphan: true   # Păstrează istoricul git curat pe branch-ul de pages
+      # 3. LOVITURA CHIRURGICALĂ PE GH-PAGES
+      - name: Inject Data into GH-Pages
+        run: |
+          # Salvăm fișierul nou într-un loc temporar sigur
+          cp public/data/satellites.tle /tmp/satellites.tle
+          
+          # Trecem pe branch-ul site-ului live
+          git checkout gh-pages
+          
+          # CRITIC: În dist/gh-pages, folderul 'public' dispare, deci 'public/data' devine doar 'data'
+          # Ne asigurăm că folderul există
+          mkdir -p data
+          
+          # Copiem fișierul de la rece (din temp) peste cel live
+          cp /tmp/satellites.tle data/satellites.tle
+          
+          # Dăm commit și push doar la acest fișier
+          git add data/satellites.tle
+          
+          if git diff --cached --quiet; then
+            echo "GH-Pages already up to date."
+          else
+            git commit -m "chore(data): surgical update TLE (no-build)"
+            git push origin gh-pages
+          fi
