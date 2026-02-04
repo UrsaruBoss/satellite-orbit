@@ -1,72 +1,48 @@
-name: Fast TLE Update (No Build)
+name: Direct Live Update
 
 on:
   schedule:
-    - cron: "15 2 * * *"  # Zilnic la 02:15 UTC
+    - cron: "15 2 * * *" # 02:15 UTC
   workflow_dispatch: {}
 
 permissions:
   contents: write
 
 jobs:
-  surgical-update:
+  run-on-gh-pages:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout main
+      - name: Checkout GH-Pages
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Avem nevoie de istoric pentru a comuta branch-urile
+          ref: gh-pages
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-
-      - name: Install deps (only for script)
-        run: npm ci
-
-      # 1. GENERĂM DATELE NOI
-      - name: Update TLE file
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          else
+            npm install axios # <--- Adauga aici alte librarii daca scriptul tau le cere
+          fi
+      - name: Update TLE
         run: node scripts/update_tle.js
 
-      # 2. SALVĂM DATELE ÎN MAIN (Ca să nu fie sursa outdated)
-      - name: Commit to Main
+      - name: Commit & Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add public/data/satellites.tle
+          # Adaugam tot ce s-a modificat (presupunand ca scriptul a suprascris .tle-ul)
+          git add .
           
           if git diff --cached --quiet; then
-            echo "No changes in TLE."
-          else
-            git commit -m "chore(data): refresh TLE [skip ci]"
-            git push origin main
+            echo "Nimic nou sub soare."
+            exit 0
           fi
-
-      # 3. LOVITURA CHIRURGICALĂ PE GH-PAGES
-      - name: Inject Data into GH-Pages
-        run: |
-          # Salvăm fișierul nou într-un loc temporar sigur
-          cp public/data/satellites.tle /tmp/satellites.tle
           
-          # Trecem pe branch-ul site-ului live
-          git checkout gh-pages
-          
-          # CRITIC: În dist/gh-pages, folderul 'public' dispare, deci 'public/data' devine doar 'data'
-          # Ne asigurăm că folderul există
-          mkdir -p data
-          
-          # Copiem fișierul de la rece (din temp) peste cel live
-          cp /tmp/satellites.tle data/satellites.tle
-          
-          # Dăm commit și push doar la acest fișier
-          git add data/satellites.tle
-          
-          if git diff --cached --quiet; then
-            echo "GH-Pages already up to date."
-          else
-            git commit -m "chore(data): surgical update TLE (no-build)"
-            git push origin gh-pages
-          fi
+          git commit -m "chore(live): auto-update satellites [skip ci]"
+          git push origin gh-pages
