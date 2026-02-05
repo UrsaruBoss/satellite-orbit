@@ -19,7 +19,7 @@ The project is designed as a **technical portfolio and research-grade visualizat
 
 The project is deployed on GitHub Pages:
 
-* [https://ursaruboss.github.io/satellite-orbit/](https://ursaruboss.github.io/satellite-orbit/)
+[**LIVE DEMO**](https://ursaruboss.github.io/satellite-orbit/)
 
 ---
 
