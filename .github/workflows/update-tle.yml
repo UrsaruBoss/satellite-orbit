@@ -1,66 +1,83 @@
-name: Update TLE & Deploy
+name: Universal TLE Update (Main & Live)
 
 on:
   schedule:
-    - cron: "15 2 * * *"  # Zilnic la 02:15 UTC
-  workflow_dispatch: {}
+    - cron: "15 2 * * *"  # 02:15 UTC Zilnic
+  workflow_dispatch: {}  
 
 permissions:
   contents: write
 
 jobs:
-  update-and-deploy:
+  update-everywhere:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # ---------------------------------------------------------
+      # PHASE 1: MAIN
+      # ---------------------------------------------------------
+      - name: Checkout Main (Source)
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0 
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
-      - name: Install deps
+      - name: Install dependencies
         run: npm ci
 
-      # 1. ACTUALIZAREA DATELOR
-      - name: Update TLE file
+      - name: Generate TLE Data
         run: node scripts/update_tle.js
 
-      # Siguranță: Verificăm dacă fișierul nu e gol (ca să nu stricăm site-ul cu date corupte)
-      - name: Verify TLE data
-        run: |
-          if [ ! -s public/data/satellites.tle ]; then
-            echo "Error: TLE file is empty or missing!"
-            exit 1
-          fi
+      - name: Save Data to Temp Vault
+        run: cp public/data/satellites.tle /tmp/satellites.tle
 
-      # 2. SALVAREA ÎN MAIN (Opțional, dar recomandat pentru istoric)
-      - name: Commit & push data to main
+      - name: Commit to Main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           git add public/data/satellites.tle
           
-          # Dăm commit doar dacă s-a schimbat ceva
           if git diff --cached --quiet; then
-            echo "No changes in TLE file."
+            echo "Main: No changes needed."
           else
-            git commit -m "chore(data): refresh TLE dataset [skip ci]"
-            git push
+            git commit -m "chore(data): refresh TLE source [skip ci]"
+            git push origin main
           fi
 
-      # 3. BUILD & DEPLOY PE GITHUB PAGES
-      # Asta face ca site-ul live să își ia noile date
-      - name: Build Project
-        run: npm run build
+      # ---------------------------------------------------------
+      # PHASE 2: GH-PAGES (LIVE SITE)
+      # ---------------------------------------------------------
+      - name: Switch to GH-Pages
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist  # Folderul creat de Vite
-          force_orphan: true   # Păstrează istoricul git curat pe branch-ul de pages
+      - name: Inject Data from Temp Vault
+        run: |
+          # Pe gh-pages structura e diferita (root = public)
+          # Deci folderul e 'data/', nu 'public/data/'
+          mkdir -p data
+          
+          # Aducem fisierul generat la Faza 1
+          cp /tmp/satellites.tle data/satellites.tle
+          
+          ls -l data/satellites.tle # Debug check
+
+      - name: Commit to Live Site
+        run: |
+          # Nu mai trebuie config user/email ca e setat global mai sus
+          
+          git add data/satellites.tle
+          
+          if git diff --cached --quiet; then
+            echo "Live: Already up to date."
+          else
+            git commit -m "chore(live): deploy fresh TLE data [skip ci]"
+            git push origin gh-pages
+          fi
