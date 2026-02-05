@@ -145,19 +145,9 @@ const GlobeViewer = ({ onSatelliteSelect }) => {
   // -----------------------------
   // Mobile
   // -----------------------------
-  const [isPortrait, setIsPortrait] = useState(false);
-
-  useEffect(() => {
-    const onResize = () => setIsPortrait(window.innerHeight > window.innerWidth);
-    onResize();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
-    };
-  }, []);
-
+  const isMobileDevice =
+  /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+  window.innerWidth < 900;
 
   // -----------------------------
   // Refs and internal caches
@@ -990,20 +980,48 @@ const GlobeViewer = ({ onSatelliteSelect }) => {
     return filteredSatellites.some((s) => s.id === selectedSat.id);
   }, [filteredSatellites, selectedSat]);
 
+if (isMobileDevice) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "radial-gradient(circle at center, #0a0e17 0%, #000 100%)",
+        color: "#ff4444",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: '"JetBrains Mono", monospace',
+        textAlign: "center",
+        padding: "30px",
+        zIndex: 999999,
+      }}
+    >
+      <div style={{ fontSize: "1.4rem", letterSpacing: "3px", marginBottom: "20px" }}>
+        ACCESS DENIED
+      </div>
+
+      <div style={{ fontSize: "0.9rem", maxWidth: "420px", opacity: 0.85 }}>
+        This application is a <b>desktop-only orbital simulation</b>.
+        <br /><br />
+        Touch devices are not supported.
+        <br /><br />
+        Please use a desktop or laptop computer.
+      </div>
+
+      <div style={{ marginTop: "30px", fontSize: "0.7rem", opacity: 0.5, letterSpacing: "2px" }}>
+        ORBITAL COMMAND // DESKTOP REQUIRED
+      </div>
+    </div>
+  );
+}
+
 
 return (
   
   <div style={{ width: "100%", height: "100vh", position: "relative", overflow: "hidden" }}>
-    {isPortrait && (
-      <div style={{ ...styles.portraitOverlay, display: "flex" }}>
-        <div style={{ fontSize: "1.2rem", letterSpacing: "2px" }}>
-          ROTATE DEVICE
-        </div>
-        <div style={{ marginTop: "12px", fontSize: "0.8rem", opacity: 0.7 }}>
-          This interface is optimized for landscape mode.
-        </div>
-      </div>
-    )}
+
 
     {isCalculating && (
       <div style={styles.loadingOverlay}>
