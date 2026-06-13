@@ -469,9 +469,9 @@ const GlobeViewer = ({ onSatelliteSelect }) => {
       updateInfoPanel(sat);
 
       // Optional: ensure tracking remains meaningful when selecting a new sat
-      // (do NOT auto-enable tracking here; only keep camera state consistent)
+
       if (viewer && viewer.trackedEntity) {
-        // If we were tracking something else, we will rebind in the tracking effect.
+
         viewer.trackedEntity = undefined;
       }
     },
@@ -568,7 +568,7 @@ const GlobeViewer = ({ onSatelliteSelect }) => {
       return;
     }
 
-    // We set trackedEntity after the selected entity exists in the viewer
+
     const t = setTimeout(() => {
     const entity =
       viewer.entities.getById("selected-sat-complex") ||
@@ -603,12 +603,10 @@ const GlobeViewer = ({ onSatelliteSelect }) => {
           if (out !== isTleOutOfRange) {
             setIsTleOutOfRange(out);
 
-            // dacă tocmai am intrat out-of-range, tăiem orbit path-ul (dar păstrăm selecția)
             if (out) {
               setSelectedSatPath(null);
               selectedSatPathRef.current = null;
             } else {
-              // dacă revenim în range și avem sat selectat, reconstruim path-ul
               if (selectedSat) calculatePreciseMovement(selectedSat);
             }
           }
@@ -807,7 +805,6 @@ const GlobeViewer = ({ onSatelliteSelect }) => {
     // Reset status each run
     setGeocodeStatus({ type: "", message: "" });
 
-    // 1) Dacă userul bagă coordonate direct: "lat, lon" (ex: "43.75, 24.87")
     const coordMatch = q.match(
       /^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/
     );
@@ -843,7 +840,6 @@ const GlobeViewer = ({ onSatelliteSelect }) => {
       }
     }
 
-    // 2) Altfel: încearcă geocoding (poate pica din CORS / 403)
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
         q
@@ -851,13 +847,11 @@ const GlobeViewer = ({ onSatelliteSelect }) => {
 
       const response = await fetch(url, {
         method: "GET",
-        // Nominatim e sensibil, dar asta nu rezolvă CORS. Ajută doar la "polite requests".
         headers: {
           "Accept": "application/json",
         },
       });
 
-      // Dacă Nominatim întoarce 403/429 etc, aruncă eroare controlată
       if (!response.ok) {
         throw new Error(`GEOCODE_HTTP_${response.status}`);
       }
@@ -899,7 +893,6 @@ const GlobeViewer = ({ onSatelliteSelect }) => {
     } catch (err) {
       console.error("Geocoding error:", err);
 
-      // Mesaj “uman”, stabil, fără să arunci UI-ul în aer
       setGeocodeStatus({
         type: "error",
         message:
