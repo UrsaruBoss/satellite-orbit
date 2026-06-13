@@ -4,6 +4,7 @@ import "./index.css";
 import App from "./App.jsx";
 
 window.CESIUM_BASE_URL = `${import.meta.env.BASE_URL}cesium/`;
+Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 
 /**
  * Application entry point.
