@@ -60,18 +60,14 @@ jobs:
 
       - name: Inject Data from Temp Vault
         run: |
-          # Pe gh-pages structura e diferita (root = public)
-          # Deci folderul e 'data/', nu 'public/data/'
           mkdir -p data
           
-          # Aducem fisierul generat la Faza 1
           cp /tmp/satellites.tle data/satellites.tle
           
           ls -l data/satellites.tle # Debug check
 
       - name: Commit to Live Site
         run: |
-          # Nu mai trebuie config user/email ca e setat global mai sus
           
           git add data/satellites.tle
           
